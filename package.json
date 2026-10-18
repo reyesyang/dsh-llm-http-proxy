@@ -4,17 +4,22 @@
   "version": "0.2.1-rc.1",
   "private": true,
   "type": "module",
-  "main": "src/index.ts",
-  "types": "src/index.ts",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
   "exports": {
-    ".": "./src/index.ts",
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
     "./src/*": "./src/*",
     "./locale/*.json": "./locale/*.json",
     "./icon": "./icon.svg",
     "./package.json": "./package.json"
   },
   "files": [
-    "src",
+    "lib/index.js",
+    "lib/index.js.map",
+    "lib/types/**/*.d.ts",
     "cordis.patch.yml",
     "locale/*.json",
     "icon.svg"
@@ -37,12 +42,16 @@
     "@deepseek-ai/cordis": "^4.0.5"
   },
   "devDependencies": {
-    "@types/node": "^22.20.1",
+    "@deepseek-ai/cordis": "^4.0.5",
+    "@types/node": "^22.20.5",
+    "esbuild": "^0.28.2",
     "typescript": "^6.0.3",
     "vitest": "^4.1.11"
   },
   "scripts": {
+    "build": "node build.mjs && tsc -b tsconfig.build.json --force && node build.mjs --fix-declarations",
     "typecheck": "tsc --noEmit",
-    "test": "node node_modules/vitest/vitest.mjs run tests"
+    "test": "node node_modules/vitest/vitest.mjs run tests",
+    "prepublishOnly": "npm run build"
   }
 }
