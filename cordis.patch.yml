@@ -1,0 +1,10 @@
+# Default plugin row for the dsh-llm-http-proxy bundle.
+#
+# `routes` starts empty so the bundle adds the capability without changing
+# traffic: every request keeps the process-wide policy until a profile (or the
+# plugin page) overrides this row's config with a host pattern table.
+- insert:
+    - id: llm-http-proxy
+      name: dsh-llm-http-proxy
+      config:
+        routes: {}

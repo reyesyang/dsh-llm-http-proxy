@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-llm-http-proxy",
+  "name": "dsh-llm-http-proxy",
   "description": "Provider-scoped outbound HTTP proxy routes for model requests",
   "version": "0.2.1-rc.1",
   "private": true,
@@ -9,15 +9,25 @@
   "exports": {
     ".": "./src/index.ts",
     "./src/*": "./src/*",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg",
     "./package.json": "./package.json"
   },
   "files": [
-    "src"
+    "src",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg"
   ],
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/reyesyang/dsh-llm-http-proxy.git"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
   },
   "dependencies": {
     "@deepseek-ai/schemastery": "^3.18.5",

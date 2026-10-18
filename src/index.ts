@@ -20,15 +20,14 @@
  *
  * ```yaml
  * - id: llm-http-proxy
- *   name: '@deepseek-ai/dsh-llm-http-proxy'
+ *   name: 'dsh-llm-http-proxy'
  *   config:
  *     routes:
  *       opencode.ai: http://127.0.0.1:7890
  *       kimi.com: http://127.0.0.1:7890
- *       jxbyun.com: direct
  * ```
  *
- * @module @deepseek-ai/dsh-llm-http-proxy
+ * @module dsh-llm-http-proxy
  */
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'

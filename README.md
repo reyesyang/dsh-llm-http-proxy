@@ -1,4 +1,4 @@
-# @deepseek-ai/dsh-llm-http-proxy
+# dsh-llm-http-proxy
 
 Provider-scoped outbound proxy routes for model requests.
 
@@ -14,14 +14,12 @@ configured route with a dispatcher chosen for that route. Unmatched requests rea
 
 ```yaml
 - id: llm-http-proxy
-  name: '@deepseek-ai/dsh-llm-http-proxy'
+  name: 'dsh-llm-http-proxy'
   config:
     routes:
       # Overseas providers through the local proxy.
       opencode.ai: http://127.0.0.1:7890
       kimi.com: http://127.0.0.1:7890
-      # Internal gateway: override a process-wide proxy for this host.
-      jxbyun.com: direct
 ```
 
 Keys are host patterns matched against each request's host with the documented `NO_PROXY`

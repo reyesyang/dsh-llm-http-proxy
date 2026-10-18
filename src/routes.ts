@@ -7,7 +7,7 @@
  * satisfied is refused at load instead of being skipped, because a silently dropped route proxies
  * exactly the traffic the user tried to route elsewhere.
  *
- * @module @deepseek-ai/dsh-llm-http-proxy/routes
+ * @module dsh-llm-http-proxy/routes
  */
 
 /** Where a matched route sends its request. */
