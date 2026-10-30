@@ -10,6 +10,14 @@ touching the process policy: it wraps `globalThis.fetch` and sends a request who
 configured route with a dispatcher chosen for that route. Unmatched requests reach the original
 `fetch` unchanged and keep the process-wide policy.
 
+A matched request travels on `undici`'s own `fetch`, not Node's built-in one. A dispatcher is only
+valid for the `fetch` from the same undici copy: Node's built-in `fetch` embeds its own undici and
+rejects a `ProxyAgent` from the npm package with `UND_ERR_INVALID_ARG: invalid onRequestStart
+method`, which the OpenAI SDK reports as `Connection error. This may be caused by passing an undici
+dispatcher...`. Pairing the two inside this plugin keeps that error out of the deployment. Request
+bodies built by the runtime's web classes are rebuilt on undici's matching classes, so a multipart
+`FormData` upload keeps its fields, file name, and media type.
+
 ## Install
 
 This package is a DSH bundle: its `package.json` declares `dsh.bundle.patch`, so a profile installs
@@ -87,15 +95,47 @@ pnpm run test
 ```
 
 DSH installations that load built packages resolve `main`/`exports` from `lib/`. A source checkout
-running `tsx` may also import `./src/*` through the `./src/*` export.
+running `tsx` may also import `./src/*` through the `./src/*` export, which is why `src/` ships in the
+tarball: `install_bundle` on a published version must still resolve that entry.
+
+## Publish
+
+The package is published to the public npm registry. `install_bundle` resolves it by name, so the
+registry entry is what DSH profiles consume.
+
+```bash
+npm login                     # npmjs.com account with publish rights
+npm publish                   # 1.0.1 is a release version: it tags `latest`
+```
+
+`prepack` runs the build, so the tarball always carries fresh `lib/` output; `prepublishOnly` runs
+typecheck and tests. `publishConfig.registry` pins the publish target to `registry.npmjs.org` even
+when the local npm config points at a mirror, and `access: public` is explicit because a scoped
+name would otherwise default to restricted.
+
+Check the tarball before publishing:
+
+```bash
+npm publish --dry-run
+npx publint .
+```
+
+A prerelease version (for example `1.1.0-rc.1`) needs an explicit dist-tag — `npm publish --tag next` —
+because npm refuses to guess `latest` for one. Move `latest` to a prerelease only deliberately:
+`npm dist-tag add dsh-llm-http-proxy@1.1.0-rc.1 latest`.
 
 ## Limits
 
 - The wrapper covers `globalThis.fetch`, which is what the shipped model adapters reach. A library
   that calls `undici.fetch` directly keeps the process-wide policy.
-- The `dispatcher` request option is a non-standard undici extension. It is measured on Node
-  22.19.0, 24.16.0, and 26.12.0; a runtime that drops it would fall back to the process-wide policy
-  rather than failing.
+- A matched request is carried by this package's `fetch`, so its `Response`, headers, and body
+  streams come from undici rather than Node's built-in implementations. They are spec-compliant and
+  stream-compatible; only a strict `instanceof Response` against the global constructor would see the
+  difference. A `FormData` body is likewise rebuilt on undici's class, which preserves multipart
+  fields and file metadata.
+- The route's `fetch` and dispatcher come from the same `undici` package, so routing does not depend
+  on which undici copy a given Node release embeds. Unmatched requests keep using Node's built-in
+  `fetch` and its process-wide policy.
 - Proxy URLs may carry credentials. Nothing here prints a proxy URL; diagnostics name the route
   pattern and the target kind only.
 - A TLS-intercepting proxy still needs `NODE_EXTRA_CA_CERTS`, which is read once at process start.

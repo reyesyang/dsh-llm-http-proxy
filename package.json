@@ -1,9 +1,11 @@
 {
   "name": "dsh-llm-http-proxy",
   "description": "Provider-scoped outbound HTTP proxy routes for model requests",
-  "version": "0.2.1-rc.1",
-  "private": true,
+  "version": "1.0.1",
   "type": "module",
+  "engines": {
+    "node": ">=22.19.0"
+  },
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
   "exports": {
@@ -20,14 +22,23 @@
     "lib/index.js",
     "lib/index.js.map",
     "lib/types/**/*.d.ts",
+    "src/**/*.ts",
     "cordis.patch.yml",
     "locale/*.json",
     "icon.svg"
+  ],
+  "keywords": [
+    "dsh",
+    "dsh-plugin"
   ],
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/reyesyang/dsh-llm-http-proxy.git"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
   },
   "dsh": {
     "bundle": {
@@ -52,6 +63,7 @@
     "build": "node build.mjs && tsc -b tsconfig.build.json --force && node build.mjs --fix-declarations",
     "typecheck": "tsc --noEmit",
     "test": "node node_modules/vitest/vitest.mjs run tests",
-    "prepublishOnly": "npm run build"
+    "prepack": "npm run build",
+    "prepublishOnly": "npm run typecheck && npm run test"
   }
 }
