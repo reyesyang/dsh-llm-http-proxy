@@ -1,7 +1,7 @@
 {
   "name": "dsh-llm-http-proxy",
   "description": "Provider-scoped outbound HTTP proxy routes for model requests",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "type": "module",
   "engines": {
     "node": ">=22.19.0"
