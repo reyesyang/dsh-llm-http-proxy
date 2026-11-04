@@ -154,7 +154,7 @@ describe('apply', () => {
 
   it('refuses an invalid configured target at load', async () => {
     context = new Context()
-    await expect(context.plugin(plugin, { routes: { 'example.com': 'socks5://127.0.0.1:1080' } }))
-      .rejects.toThrow(/unsupported socks5:\/\/ scheme/)
+    await expect(context.plugin(plugin, { routes: { 'example.com': 'socks4://127.0.0.1:1080' } }))
+      .rejects.toThrow(/unsupported socks4:\/\/ scheme/)
   })
 })

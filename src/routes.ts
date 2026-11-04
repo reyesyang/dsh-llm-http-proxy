@@ -24,7 +24,25 @@ export interface ProxyRoute {
 }
 
 /** Proxy URL schemes this plugin can route through. */
-const SUPPORTED_PROXY_PROTOCOLS: ReadonlySet<string> = new Set(['http:', 'https:'])
+const SUPPORTED_PROXY_PROTOCOLS: ReadonlySet<string> = new Set([
+  'http:',
+  'https:',
+  'socks:',
+  'socks5:',
+  'socks5h:',
+])
+
+/**
+ * Aliases accepted in configuration and rewritten to the scheme undici dispatches on.
+ *
+ * `socks5h` is the `curl` spelling of "let the proxy resolve the host"; undici's SOCKS5 dispatcher
+ * always does that, so the alias selects the same transport as `socks5`. `socks` is undici's own
+ * alias for it.
+ */
+const PROXY_SCHEME_ALIASES: ReadonlyMap<string, string> = new Map([
+  ['socks:', 'socks5:'],
+  ['socks5h:', 'socks5:'],
+])
 
 /** The configuration value selecting a direct connection instead of a proxy. */
 const DIRECT_TARGET = 'direct'
@@ -32,7 +50,7 @@ const DIRECT_TARGET = 'direct'
 /**
  * Validate the configured route table.
  *
- * @param raw - the configured map of host pattern to `direct` or an HTTP(S) proxy URL.
+ * @param raw - the configured map of host pattern to `direct` or a proxy URL.
  * @returns one validated route per entry, in configuration order.
  * @throws when a pattern is blank or a target is neither `direct` nor a usable proxy URL.
  */
@@ -51,10 +69,14 @@ export function compileRoutes(raw: Readonly<Record<string, string>>): ProxyRoute
     if (!SUPPORTED_PROXY_PROTOCOLS.has(parsed.protocol)) {
       throw new Error(
         `llm-http-proxy: route "${rawPattern}" uses the unsupported ${parsed.protocol}// scheme;`
-        + ' use an http:// or https:// proxy URL',
+        + ' use an http://, https://, or socks5:// proxy URL',
       )
     }
-    return { pattern, target: { kind: 'proxy', proxyUrl: value } }
+    const alias = PROXY_SCHEME_ALIASES.get(parsed.protocol)
+    const proxyUrl = alias === undefined
+      ? value
+      : `${alias}//${value.slice(parsed.protocol.length + 2)}`
+    return { pattern, target: { kind: 'proxy', proxyUrl } }
   })
 }
 

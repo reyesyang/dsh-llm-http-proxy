@@ -14,6 +14,27 @@ describe('compileRoutes', () => {
     ])
   })
 
+  it('accepts a SOCKS5 proxy target', () => {
+    expect(compileRoutes({ 'example.com': 'socks5://127.0.0.1:1080' })).toEqual([
+      { pattern: 'example.com', target: { kind: 'proxy', proxyUrl: 'socks5://127.0.0.1:1080' } },
+    ])
+  })
+
+  it.each([
+    ['socks', 'socks://127.0.0.1:1080'],
+    ['socks5h', 'socks5h://127.0.0.1:1080'],
+  ])('rewrites a %s alias to the scheme undici dispatches on', (_label, written) => {
+    expect(compileRoutes({ 'example.com': written })).toEqual([
+      { pattern: 'example.com', target: { kind: 'proxy', proxyUrl: 'socks5://127.0.0.1:1080' } },
+    ])
+  })
+
+  it('keeps SOCKS5 credentials and a rewritten scheme together', () => {
+    expect(compileRoutes({ 'example.com': 'socks5h://alice:s3cret@10.0.0.1:1080' })).toEqual([
+      { pattern: 'example.com', target: { kind: 'proxy', proxyUrl: 'socks5://alice:s3cret@10.0.0.1:1080' } },
+    ])
+  })
+
   it('normalizes case and surrounding whitespace', () => {
     expect(compileRoutes({ ' Example.COM ': ' DIRECT ' })).toEqual([
       { pattern: 'example.com', target: { kind: 'direct' } },
@@ -29,7 +50,8 @@ describe('compileRoutes', () => {
   it.each([
     ['an empty pattern', { ' ': 'direct' }, /must not be empty/],
     ['an unparseable target', { 'example.com': 'not a url' }, /neither "direct" nor a valid URL/],
-    ['a SOCKS target', { 'example.com': 'socks5://127.0.0.1:1080' }, /unsupported socks5:\/\/ scheme/],
+    ['a SOCKS4 target', { 'example.com': 'socks4://127.0.0.1:1080' }, /unsupported socks4:\/\/ scheme/],
+    ['a plain HTTP target', { 'example.com': 'ftp://example.com' }, /unsupported ftp:\/\/ scheme/],
   ])('refuses %s', (_label, raw, message) => {
     expect(() => compileRoutes(raw)).toThrow(message)
   })

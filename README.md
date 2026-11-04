@@ -65,7 +65,7 @@ Keys are host patterns matched against each request's host with the documented `
 vocabulary: an entry matches its host and every subdomain under it, a leading `.` or `*.` means the
 same suffix rule, an optional `:port` narrows the entry, and `*` matches every host. First match
 wins, so an explicit host entry must come before a `*` fallback. Values are `direct` (bypass any
-process-wide proxy) or an `http://` / `https://` proxy URL.
+process-wide proxy) or an `http://`, `https://`, or `socks5://` proxy URL.
 
 To send everything else through a proxy while keeping named hosts direct, put the wildcard last:
 
@@ -80,8 +80,17 @@ endpoint, so write the host of the provider's configured `baseURL`. For `https:/
 that is `api.example.com` (or `example.com` to cover the whole domain).
 
 A malformed pattern or proxy URL fails the plugin load instead of being skipped: a silently dropped
-route proxies exactly the traffic the user tried to route elsewhere. A SOCKS proxy URL is refused;
-point the entry at the proxy application's HTTP port instead.
+route proxies exactly the traffic the user tried to route elsewhere.
+
+A `socks5://` entry tunnels through a SOCKS5 proxy using undici's `Socks5ProxyAgent`, which is
+marked experimental and emits one `ExperimentalWarning` per process when first built. The host name
+is sent to the proxy rather than resolved locally, so `socks5h://` and `socks://` are accepted as
+aliases and resolve to the same transport. SOCKS4 has no equivalent and is refused.
+
+```yaml
+    routes:
+      amr-link.example.com: socks5://127.0.0.1:7891
+```
 
 ## Build
 
