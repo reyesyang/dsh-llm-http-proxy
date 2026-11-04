@@ -114,7 +114,7 @@ registry entry is what DSH profiles consume.
 
 ```bash
 npm login                     # npmjs.com account with publish rights
-npm publish                   # 1.0.1 is a release version: it tags `latest`
+npm publish                   # a release version: it tags `latest`
 ```
 
 `prepack` runs the build, so the tarball always carries fresh `lib/` output; `prepublishOnly` runs
