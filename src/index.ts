@@ -251,9 +251,29 @@ class RouteTransports implements RouteTransportSource {
     // proxy-exempt: provider-scoped dispatcher construction.
     const dispatcher = target.kind === 'direct'
       ? new undici.Agent()
-      : new undici.ProxyAgent({ uri: target.proxyUrl })
+      : createProxyDispatcher(undici, target.proxyUrl)
     return { fetch: undiciFetch(undici), dispatcher }
   }
+}
+
+/**
+ * Build the dispatcher one proxy URL asks for.
+ *
+ * `compileRoutes` has already refused every scheme but these, so the scheme only decides between
+ * HTTP CONNECT tunnelling and a SOCKS5 handshake. undici's SOCKS5 dispatcher emits a one-time
+ * `ExperimentalWarning` when built, and sends the host name to the proxy rather than resolving it
+ * locally — the behaviour `socks5h` names in `curl`.
+ *
+ * @param undici - the module building the dispatcher.
+ * @param proxyUrl - a validated `http:`, `https:`, or `socks5:` proxy URL.
+ * @returns the dispatcher sending this route's requests.
+ */
+function createProxyDispatcher(undici: typeof import('undici'), proxyUrl: string): Dispatcher {
+  // The scheme was validated when the route table was compiled.
+  // proxy-exempt: provider-scoped dispatcher construction.
+  return new URL(proxyUrl).protocol === 'socks5:'
+    ? new undici.Socks5ProxyAgent(proxyUrl)
+    : new undici.ProxyAgent({ uri: proxyUrl })
 }
 
 /**

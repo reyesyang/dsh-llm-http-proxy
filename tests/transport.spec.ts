@@ -1,17 +1,18 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import http from 'node:http'
+import net from 'node:net'
 import type { AddressInfo } from 'node:net'
 import { Context } from '@deepseek-ai/cordis'
 import { getGlobalDispatcher, ProxyAgent, setGlobalDispatcher } from 'undici'
 import * as plugin from '../src/index.ts'
 
 interface Running {
-  readonly server: http.Server
+  readonly server: net.Server
   readonly url: string
 }
 
 /** Listen on an ephemeral loopback port and report the base URL. */
-function listen(server: http.Server): Promise<Running> {
+function listen(server: net.Server): Promise<Running> {
   return new Promise((resolve, reject) => {
     server.once('error', reject)
     server.listen(0, '127.0.0.1', () => {
@@ -22,7 +23,7 @@ function listen(server: http.Server): Promise<Running> {
 }
 
 /** Close a server and wait for its sockets, matching the transport's own disposal order. */
-function close(server: http.Server): Promise<void> {
+function close(server: net.Server): Promise<void> {
   return new Promise((resolve, reject) => {
     server.close((error) => error === undefined ? resolve() : reject(error))
   })
@@ -62,10 +63,81 @@ function proxyServer(onRequest: () => void): http.Server {
   })
 }
 
+/**
+ * A minimal SOCKS5 CONNECT server (RFC 1928, no authentication) that records the address type and
+ * host name each tunnel asked for.
+ *
+ * The recorded address type is what separates `socks5` from `socks5h` in `curl` terms: a `DOMAIN`
+ * request leaves resolution to the proxy, an `IPV4` request resolves locally before connecting.
+ */
+function socks5Server(onConnect: (addressType: number, host: string) => void): net.Server {
+  return net.createServer((client) => {
+    let stage: 'greeting' | 'request' | 'tunnelling' = 'greeting'
+    let buffered = Buffer.alloc(0)
+
+    const tunnel = (addressType: number, host: string, port: number, leftover: Buffer): void => {
+      onConnect(addressType, host)
+      const upstream = net.connect(port, host, () => {
+        client.write(Buffer.from([0x05, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0]))
+        if (leftover.length > 0) upstream.write(leftover)
+        upstream.pipe(client)
+        client.pipe(upstream)
+      })
+      upstream.on('error', () => client.destroy())
+      client.on('error', () => upstream.destroy())
+    }
+
+    const pump = (): void => {
+      // Once the tunnel is open the bytes are the tunnelled protocol's, not another SOCKS5
+      // handshake: the client keeps the connection for the request it opened it for.
+      if (stage === 'tunnelling') return
+      if (stage === 'greeting') {
+        if (buffered.length < 2) return
+        const methods = buffered[1] ?? 0
+        if (buffered.length < 2 + methods) return
+        buffered = buffered.subarray(2 + methods)
+        client.write(Buffer.from([0x05, 0x00]))
+        stage = 'request'
+      }
+      if (buffered.length < 5) return
+      const addressType = buffered[3] ?? 0
+      let host: string
+      let offset: number
+      if (addressType === 0x01) {
+        if (buffered.length < 10) return
+        host = [...buffered.subarray(4, 8)].join('.')
+        offset = 8
+      } else if (addressType === 0x03) {
+        const length = buffered[4] ?? 0
+        if (buffered.length < 5 + length + 2) return
+        host = buffered.subarray(5, 5 + length).toString('utf8')
+        offset = 5 + length
+      } else {
+        client.destroy()
+        return
+      }
+      if (buffered.length < offset + 2) return
+      const port = buffered.readUInt16BE(offset)
+      const leftover = buffered.subarray(offset + 2)
+      stage = 'tunnelling'
+      buffered = Buffer.alloc(0)
+      tunnel(addressType, host, port, leftover)
+    }
+
+    client.on('data', (chunk) => {
+      if (stage === 'tunnelling') return
+      buffered = Buffer.concat([buffered, chunk])
+      pump()
+    })
+    client.on('error', () => {})
+  })
+}
+
 describe('routed transport', () => {
   let context: Context | undefined
-  const servers: http.Server[] = []
+  const servers: net.Server[] = []
   let proxyHits = 0
+  const tunnels: { addressType: number; host: string }[] = []
 
   afterEach(async () => {
     // Disposing closes the plugin's agents first; only then can the servers' keep-alive sockets go.
@@ -73,6 +145,7 @@ describe('routed transport', () => {
     context = undefined
     await Promise.all(servers.splice(0).map(close))
     proxyHits = 0
+    tunnels.length = 0
   })
 
   /** Start an origin and a proxy, and return a route from the origin to the proxy. */
@@ -152,5 +225,37 @@ describe('routed transport', () => {
       setGlobalDispatcher(previous)
       await processProxy.close()
     }
+  })
+
+  it('sends a matched request through a SOCKS5 proxy', async () => {
+    const target = await listen(targetServer())
+    const socks = await listen(socks5Server((addressType, host) => { tunnels.push({ addressType, host }) }))
+    servers.push(target.server, socks.server)
+    const port = new URL(target.url).port
+    // The route names localhost, not 127.0.0.1: only a host name can arrive as a SOCKS5 DOMAIN
+    // request, which is the address type that leaves resolution to the proxy.
+    context = new Context()
+    await context.plugin(plugin, { routes: { [`localhost:${port}`]: `socks5://${new URL(socks.url).host}` } })
+
+    const response = await globalThis.fetch(`http://localhost:${port}/v1/messages`)
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({ method: 'GET', body: '' })
+    // 0x03 is DOMAIN: the proxy resolved the host, as `socks5h` asks of curl.
+    expect(tunnels).toEqual([{ addressType: 0x03, host: 'localhost' }])
+  })
+
+  it('treats a socks5h alias as the same SOCKS5 transport', async () => {
+    const target = await listen(targetServer())
+    const socks = await listen(socks5Server((addressType, host) => { tunnels.push({ addressType, host }) }))
+    servers.push(target.server, socks.server)
+    const port = new URL(target.url).port
+    context = new Context()
+    await context.plugin(plugin, { routes: { [`localhost:${port}`]: `socks5h://${new URL(socks.url).host}` } })
+
+    const response = await globalThis.fetch(`http://localhost:${port}/alias`)
+
+    expect(response.status).toBe(200)
+    expect(tunnels).toEqual([{ addressType: 0x03, host: 'localhost' }])
   })
 })
