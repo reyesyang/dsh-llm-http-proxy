@@ -1,4 +1,4 @@
-# Default plugin row for the dsh-llm-proxy bundle.
+# Default plugin row for the @0x0lab/dsh-llm-proxy bundle.
 #
 # `providers` and `routes` both start empty so the bundle adds the capability
 # without changing traffic: every request keeps the process-wide policy until a
@@ -8,7 +8,7 @@
 # patch and the running plugin picks the value up without a reload.
 - insert:
     - id: llm-proxy
-      name: dsh-llm-proxy
+      name: '@0x0lab/dsh-llm-proxy'
       config:
         providers: {}
         routes: {}

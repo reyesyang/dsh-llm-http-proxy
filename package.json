@@ -1,6 +1,6 @@
 {
-  "name": "dsh-llm-proxy",
-  "description": "Provider-scoped outbound HTTP proxy routes for model requests",
+  "name": "@0x0lab/dsh-llm-proxy",
+  "description": "Provider-scoped outbound proxy for model requests",
   "version": "2.1.0",
   "type": "module",
   "engines": {
