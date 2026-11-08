@@ -1,5 +1,5 @@
 /**
- * Browser half of dsh-llm-http-proxy.
+ * Browser half of dsh-llm-proxy.
  *
  * The bundle's detail page renders this card through `plugins.bundle.config`:
  * one row per configured LLM provider, plus a form that adds or replaces a
@@ -11,10 +11,10 @@
  * dropdown follows the providers composed in this deployment. When that
  * catalogue is unavailable the form falls back to a provider id text input.
  *
- * @module dsh-llm-http-proxy/client
+ * @module dsh-llm-proxy/client
  */
 window.__ModuleLoader__.load({
-  id: 'dsh-llm-http-proxy',
+  id: 'dsh-llm-proxy',
   factory(require) {
     const React = require('react')
     const h = React.createElement
@@ -22,9 +22,9 @@ window.__ModuleLoader__.load({
     /** Client locale namespace owned by this plugin. */
     const NS = 'llmHttpProxy'
     /** Bundle package name: the key `plugins.bundle.config` dispatches. */
-    const PACKAGE = 'dsh-llm-http-proxy'
+    const PACKAGE = 'dsh-llm-proxy'
     /** Profile entry id this bundle inserts; the settings namespace of its config. */
-    const ENTRY = 'llm-http-proxy'
+    const ENTRY = 'llm-proxy'
 
     const en = {
       title: 'Outbound proxy',
@@ -83,37 +83,37 @@ window.__ModuleLoader__.load({
     }
 
     const css = `
-.llm-http-proxy-config { display: flex; flex-direction: column; gap: 14px; font-size: 13px; color: var(--dsw-alias-label-primary); }
-.llm-http-proxy-title { margin: 0; font-size: 14px; font-weight: 600; }
-.llm-http-proxy-intro { margin: 0; color: var(--dsw-alias-label-secondary); line-height: 1.6; }
-.llm-http-proxy-list { display: flex; flex-direction: column; gap: 8px; }
-.llm-http-proxy-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 8px; background: var(--dsw-alias-bg-layer-1); }
-.llm-http-proxy-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.llm-http-proxy-tag { padding: 1px 7px; border-radius: 999px; border: 1px solid var(--dsw-alias-border-l1); font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--dsw-alias-label-secondary); }
-.llm-http-proxy-address { color: var(--dsw-alias-label-secondary); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
-.llm-http-proxy-spacer { flex: 1; }
-.llm-http-proxy-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; padding: 12px; border: 1px dashed var(--dsw-alias-border-l1); border-radius: 8px; }
-.llm-http-proxy-field { display: flex; flex-direction: column; gap: 4px; min-width: 140px; }
-.llm-http-proxy-field > span { color: var(--dsw-alias-label-secondary); font-size: 12px; }
-.llm-http-proxy-input, .llm-http-proxy-select { padding: 6px 8px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 6px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); font-size: 13px; max-width: 240px; }
-.llm-http-proxy-input:focus, .llm-http-proxy-select:focus { outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: -1px; }
-.llm-http-proxy-button { padding: 6px 12px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 6px; background: var(--dsw-alias-bg-layer-1); color: var(--dsw-alias-label-primary); font-size: 13px; cursor: pointer; }
-.llm-http-proxy-button:hover:not(:disabled) { border-color: var(--dsw-alias-border-l2); }
-.llm-http-proxy-button:disabled { opacity: 0.5; cursor: default; }
-.llm-http-proxy-button--primary { background: var(--dsw-alias-brand-primary); border-color: var(--dsw-alias-brand-primary); color: var(--dsw-alias-bg-base); }
-.llm-http-proxy-error { color: var(--dsw-alias-state-error-primary); font-size: 12px; }
-.llm-http-proxy-note { color: var(--dsw-alias-state-success-primary); font-size: 12px; }
-.llm-http-proxy-empty { color: var(--dsw-alias-label-secondary); }
-.llm-http-proxy-row[data-disabled='true'] .llm-http-proxy-name,
-.llm-http-proxy-row[data-disabled='true'] .llm-http-proxy-address { opacity: 0.5; }
-.llm-http-proxy-switch { box-sizing: border-box; position: relative; flex: 0 0 auto; width: 36px; height: 20px; padding: 2px; border: 0; border-radius: 999px; background: var(--dsw-alias-border-l3); cursor: pointer; }
-.llm-http-proxy-switch[aria-checked='true'] { background: var(--dsw-alias-brand-primary); }
-.llm-http-proxy-switch:disabled { cursor: default; opacity: 0.5; }
-.llm-http-proxy-switch:focus-visible { outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: 2px; }
-.llm-http-proxy-switch-thumb { display: block; width: 16px; height: 16px; border-radius: 50%; background: var(--dsw-alias-switch-thumb); transition: transform 120ms ease; }
-.llm-http-proxy-switch[aria-checked='true'] .llm-http-proxy-switch-thumb { background: var(--dsw-alias-label-primary-foreground); transform: translateX(16px); }
-.llm-http-proxy-row[data-editing='true'] .llm-http-proxy-input,
-.llm-http-proxy-row[data-editing='true'] .llm-http-proxy-select { max-width: 170px; }
+.llm-proxy-config { display: flex; flex-direction: column; gap: 14px; font-size: 13px; color: var(--dsw-alias-label-primary); }
+.llm-proxy-title { margin: 0; font-size: 14px; font-weight: 600; }
+.llm-proxy-intro { margin: 0; color: var(--dsw-alias-label-secondary); line-height: 1.6; }
+.llm-proxy-list { display: flex; flex-direction: column; gap: 8px; }
+.llm-proxy-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 8px; background: var(--dsw-alias-bg-layer-1); }
+.llm-proxy-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.llm-proxy-tag { padding: 1px 7px; border-radius: 999px; border: 1px solid var(--dsw-alias-border-l1); font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--dsw-alias-label-secondary); }
+.llm-proxy-address { color: var(--dsw-alias-label-secondary); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+.llm-proxy-spacer { flex: 1; }
+.llm-proxy-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; padding: 12px; border: 1px dashed var(--dsw-alias-border-l1); border-radius: 8px; }
+.llm-proxy-field { display: flex; flex-direction: column; gap: 4px; min-width: 140px; }
+.llm-proxy-field > span { color: var(--dsw-alias-label-secondary); font-size: 12px; }
+.llm-proxy-input, .llm-proxy-select { padding: 6px 8px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 6px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); font-size: 13px; max-width: 240px; }
+.llm-proxy-input:focus, .llm-proxy-select:focus { outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: -1px; }
+.llm-proxy-button { padding: 6px 12px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 6px; background: var(--dsw-alias-bg-layer-1); color: var(--dsw-alias-label-primary); font-size: 13px; cursor: pointer; }
+.llm-proxy-button:hover:not(:disabled) { border-color: var(--dsw-alias-border-l2); }
+.llm-proxy-button:disabled { opacity: 0.5; cursor: default; }
+.llm-proxy-button--primary { background: var(--dsw-alias-brand-primary); border-color: var(--dsw-alias-brand-primary); color: var(--dsw-alias-bg-base); }
+.llm-proxy-error { color: var(--dsw-alias-state-error-primary); font-size: 12px; }
+.llm-proxy-note { color: var(--dsw-alias-state-success-primary); font-size: 12px; }
+.llm-proxy-empty { color: var(--dsw-alias-label-secondary); }
+.llm-proxy-row[data-disabled='true'] .llm-proxy-name,
+.llm-proxy-row[data-disabled='true'] .llm-proxy-address { opacity: 0.5; }
+.llm-proxy-switch { box-sizing: border-box; position: relative; flex: 0 0 auto; width: 36px; height: 20px; padding: 2px; border: 0; border-radius: 999px; background: var(--dsw-alias-border-l3); cursor: pointer; }
+.llm-proxy-switch[aria-checked='true'] { background: var(--dsw-alias-brand-primary); }
+.llm-proxy-switch:disabled { cursor: default; opacity: 0.5; }
+.llm-proxy-switch:focus-visible { outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: 2px; }
+.llm-proxy-switch-thumb { display: block; width: 16px; height: 16px; border-radius: 50%; background: var(--dsw-alias-switch-thumb); transition: transform 120ms ease; }
+.llm-proxy-switch[aria-checked='true'] .llm-proxy-switch-thumb { background: var(--dsw-alias-label-primary-foreground); transform: translateX(16px); }
+.llm-proxy-row[data-editing='true'] .llm-proxy-input,
+.llm-proxy-row[data-editing='true'] .llm-proxy-select { max-width: 170px; }
 `
 
     /** Split a settings snapshot into the provider table the card renders. */
@@ -298,21 +298,21 @@ window.__ModuleLoader__.load({
       }
 
       if (snapshot.status === 'loading') {
-        return h('div', { className: 'llm-http-proxy-config' }, h('style', null, css), h('p', { className: 'llm-http-proxy-intro' }, t('loading')))
+        return h('div', { className: 'llm-proxy-config' }, h('style', null, css), h('p', { className: 'llm-proxy-intro' }, t('loading')))
       }
       if (snapshot.status === 'unavailable') {
-        return h('div', { className: 'llm-http-proxy-config' }, h('style', null, css), h('p', { className: 'llm-http-proxy-intro' }, t('unavailable')))
+        return h('div', { className: 'llm-proxy-config' }, h('style', null, css), h('p', { className: 'llm-proxy-intro' }, t('unavailable')))
       }
 
       const rows = configured.length === 0
-        ? [h('p', { key: 'empty', className: 'llm-http-proxy-empty' }, t('empty'))]
+        ? [h('p', { key: 'empty', className: 'llm-proxy-empty' }, t('empty'))]
         : configured.map(([id, setting]) => {
           const enabled = !setting || setting.enabled !== false
           if (editing !== null && editing.id === id) {
-            return h('div', { key: id, className: 'llm-http-proxy-row', 'data-editing': 'true' },
-              h('span', { className: 'llm-http-proxy-name' }, knownNames.get(id) ?? id),
+            return h('div', { key: id, className: 'llm-proxy-row', 'data-editing': 'true' },
+              h('span', { className: 'llm-proxy-name' }, knownNames.get(id) ?? id),
               h('select', {
-                className: 'llm-http-proxy-select',
+                className: 'llm-proxy-select',
                 value: editing.type,
                 disabled: busy,
                 'aria-label': t('transport'),
@@ -321,7 +321,7 @@ window.__ModuleLoader__.load({
               h('option', { value: 'http' }, 'HTTP'),
               h('option', { value: 'socks5' }, 'SOCKS5')),
               h('input', {
-                className: 'llm-http-proxy-input',
+                className: 'llm-proxy-input',
                 value: editing.address,
                 disabled: busy,
                 'aria-label': t('address'),
@@ -332,29 +332,29 @@ window.__ModuleLoader__.load({
                   else if (event.key === 'Escape') setEditing(null)
                 },
               }),
-              h('span', { className: 'llm-http-proxy-spacer' }),
+              h('span', { className: 'llm-proxy-spacer' }),
               h('button', {
                 type: 'button',
-                className: 'llm-http-proxy-button llm-http-proxy-button--primary',
+                className: 'llm-proxy-button llm-proxy-button--primary',
                 disabled: busy || !snapshot.writable,
                 onClick: () => { void saveEdit() },
               }, t('save')),
               h('button', {
                 type: 'button',
-                className: 'llm-http-proxy-button',
+                className: 'llm-proxy-button',
                 disabled: busy,
                 onClick: () => { setEditing(null) },
               }, t('cancel')),
             )
           }
-          return h('div', { key: id, className: 'llm-http-proxy-row', 'data-disabled': enabled ? undefined : 'true' },
-            h('span', { className: 'llm-http-proxy-name' }, knownNames.get(id) ?? id),
-            h('span', { className: 'llm-http-proxy-tag' }, setting && setting.type === 'socks5' ? 'SOCKS5' : 'HTTP'),
-            h('span', { className: 'llm-http-proxy-address' }, setting && typeof setting.address === 'string' ? setting.address : ''),
-            h('span', { className: 'llm-http-proxy-spacer' }),
+          return h('div', { key: id, className: 'llm-proxy-row', 'data-disabled': enabled ? undefined : 'true' },
+            h('span', { className: 'llm-proxy-name' }, knownNames.get(id) ?? id),
+            h('span', { className: 'llm-proxy-tag' }, setting && setting.type === 'socks5' ? 'SOCKS5' : 'HTTP'),
+            h('span', { className: 'llm-proxy-address' }, setting && typeof setting.address === 'string' ? setting.address : ''),
+            h('span', { className: 'llm-proxy-spacer' }),
             h('button', {
               type: 'button',
-              className: 'llm-http-proxy-button',
+              className: 'llm-proxy-button',
               disabled: busy || !snapshot.writable,
               onClick: () => {
                 setNotice(false)
@@ -372,13 +372,13 @@ window.__ModuleLoader__.load({
               'aria-checked': enabled,
               'aria-label': t('toggleProvider'),
               title: t('toggleProvider'),
-              className: 'llm-http-proxy-switch',
+              className: 'llm-proxy-switch',
               disabled: busy || !snapshot.writable,
               onClick: () => { void toggle(id, !enabled) },
-            }, h('span', { className: 'llm-http-proxy-switch-thumb' })),
+            }, h('span', { className: 'llm-proxy-switch-thumb' })),
             h('button', {
               type: 'button',
-              className: 'llm-http-proxy-button',
+              className: 'llm-proxy-button',
               disabled: busy || !snapshot.writable,
               onClick: () => { void remove(id) },
             }, t('remove')),
@@ -395,7 +395,7 @@ window.__ModuleLoader__.load({
 
       const providerControl = effectiveOptions.length > 0
         ? h('select', {
-          className: 'llm-http-proxy-select',
+          className: 'llm-proxy-select',
           value: providerId,
           onChange: event => { setProviderId(event.target.value) },
         }, [
@@ -403,35 +403,35 @@ window.__ModuleLoader__.load({
           ...effectiveOptions.map(provider => h('option', { key: provider.id, value: provider.id }, provider.name)),
         ])
         : h('input', {
-          className: 'llm-http-proxy-input',
+          className: 'llm-proxy-input',
           value: providerId,
           placeholder: catalogue.state === 'ready' ? t('providerPlaceholder') : t('providerIdPlaceholder'),
           onChange: event => { setProviderId(event.target.value) },
         })
 
-      return h('div', { className: 'llm-http-proxy-config' },
+      return h('div', { className: 'llm-proxy-config' },
         h('style', null, css),
-        h('h3', { className: 'llm-http-proxy-title' }, t('title')),
-        h('div', { className: 'llm-http-proxy-list' }, rows),
-        h('div', { className: 'llm-http-proxy-form' },
-          h('label', { className: 'llm-http-proxy-field' },
+        h('h3', { className: 'llm-proxy-title' }, t('title')),
+        h('div', { className: 'llm-proxy-list' }, rows),
+        h('div', { className: 'llm-proxy-form' },
+          h('label', { className: 'llm-proxy-field' },
             h('span', null, t('provider')),
             providerControl,
           ),
-          h('label', { className: 'llm-http-proxy-field' },
+          h('label', { className: 'llm-proxy-field' },
             h('span', null, t('transport')),
             h('select', {
-              className: 'llm-http-proxy-select',
+              className: 'llm-proxy-select',
               value: transport,
               onChange: event => { setTransport(event.target.value) },
             },
             h('option', { value: 'http' }, 'HTTP'),
             h('option', { value: 'socks5' }, 'SOCKS5')),
           ),
-          h('label', { className: 'llm-http-proxy-field' },
+          h('label', { className: 'llm-proxy-field' },
             h('span', null, t('address')),
             h('input', {
-              className: 'llm-http-proxy-input',
+              className: 'llm-proxy-input',
               value: address,
               placeholder: t('addressPlaceholder'),
               onChange: event => { setAddress(event.target.value) },
@@ -442,14 +442,14 @@ window.__ModuleLoader__.load({
           ),
           h('button', {
             type: 'button',
-            className: 'llm-http-proxy-button llm-http-proxy-button--primary',
+            className: 'llm-proxy-button llm-proxy-button--primary',
             disabled: busy || !snapshot.writable,
             onClick: () => { void submit() },
           }, providerId !== '' && configuredProviders.has(providerId) ? t('replace') : t('add')),
         ),
-        error === null ? null : h('p', { className: 'llm-http-proxy-error' }, error),
-        catalogueNote === null ? null : h('p', { className: 'llm-http-proxy-error' }, catalogueNote),
-        notice ? h('p', { className: 'llm-http-proxy-note' }, t('saved')) : null,
+        error === null ? null : h('p', { className: 'llm-proxy-error' }, error),
+        catalogueNote === null ? null : h('p', { className: 'llm-proxy-error' }, catalogueNote),
+        notice ? h('p', { className: 'llm-proxy-note' }, t('saved')) : null,
       )
     }
 
@@ -461,7 +461,7 @@ window.__ModuleLoader__.load({
         // The card is registered as the bundle's own configuration on its detail page.
         const t = ctx.locale.bind(NS)
         const form = ctx.configForms.get(ENTRY)
-        ctx.effect(() => ctx.locale.register(NS, { en, zh }), 'llm-http-proxy: locale')
+        ctx.effect(() => ctx.locale.register(NS, { en, zh }), 'llm-proxy: locale')
         ctx.effect(() => ctx.slots.inject('plugins.bundle.config', () => ctx.slots.register({
           name: 'plugins.bundle.config',
           key: PACKAGE,
@@ -471,7 +471,7 @@ window.__ModuleLoader__.load({
           // The bundle page renders this entry without the row-level `form` prop, so the card owns
           // the settings form; the page's own ConfigPageForm is only supplied to row configs.
           return h(ConfigCard, { ...props, form, ctx })
-        })), 'llm-http-proxy: configuration card')
+        })), 'llm-proxy: configuration card')
       },
     }
   },

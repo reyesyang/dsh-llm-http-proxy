@@ -7,7 +7,7 @@
  * SOCKS5 handshake — and the address stays a plain endpoint without a scheme;
  * this module turns the pair into the proxy URL undici dispatches on.
  *
- * @module dsh-llm-http-proxy/providers
+ * @module dsh-llm-proxy/providers
  */
 
 /** The transports the plugin page offers. */
@@ -48,20 +48,20 @@ export function compileProviderProxies(raw: ProviderProxyTable): Map<string, str
     // The switch pauses an entry without discarding its address; a paused provider is not proxied.
     if (setting.enabled === false) continue
     const provider = rawProvider.trim()
-    if (provider === '') throw new Error('llm-http-proxy: provider ids must not be empty')
+    if (provider === '') throw new Error('llm-proxy: provider ids must not be empty')
     const address = setting.address.trim()
     if (address === '') {
-      throw new Error(`llm-http-proxy: provider "${rawProvider}" has an empty proxy address`)
+      throw new Error(`llm-proxy: provider "${rawProvider}" has an empty proxy address`)
     }
     if (address.includes('://')) {
       throw new Error(
-        `llm-http-proxy: provider "${rawProvider}" proxy address must be host:port without a scheme`,
+        `llm-proxy: provider "${rawProvider}" proxy address must be host:port without a scheme`,
       )
     }
     const proxyUrl = `${setting.type === 'socks5' ? 'socks5' : 'http'}://${address}`
     const parsed = URL.parse(proxyUrl)
     if (parsed === null || parsed.hostname === '') {
-      throw new Error(`llm-http-proxy: provider "${rawProvider}" has an invalid proxy address "${address}"`)
+      throw new Error(`llm-proxy: provider "${rawProvider}" has an invalid proxy address "${address}"`)
     }
     compiled.set(provider, proxyUrl)
   }
