@@ -1,9 +1,45 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-  <path d="M4 12h6"/>
-  <path d="M14 12h6"/>
-  <circle cx="12" cy="12" r="2.4"/>
-  <path d="M4 7.5h8a2 2 0 0 1 2 2"/>
-  <path d="M20 16.5h-8a2 2 0 0 1-2-2"/>
-  <path d="M3.5 5.5v13"/>
-  <path d="M20.5 5.5v13"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="iconTitle iconDesc">
+  <title id="iconTitle">Proxy 盾牌</title>
+  <desc id="iconDesc">透明底方形插件图标：DeepSeek 蓝渐变盾牌配浅蓝描边与柔和投影，中央为白色 Proxy 字样，代表为每个 provider 单独配置的代理保护。</desc>
+
+  <style>
+    :root {
+      --rim: #e4e9fb;
+      --rim-width: 30;
+      --label: #ffffff;
+    }
+    .shield-rim {
+      fill: none;
+      stroke: var(--rim);
+      stroke-width: var(--rim-width);
+      stroke-linejoin: round;
+    }
+    .shield-body { fill: url(#shieldFill); }
+    .label {
+      fill: var(--label);
+      font-family: "SF Pro Display", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+      font-size: 108px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      text-anchor: middle;
+    }
+  </style>
+
+  <defs>
+    <linearGradient id="shieldFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5c8bff"/>
+      <stop offset="0.45" stop-color="#4d6bfe"/>
+      <stop offset="1" stop-color="#2b32e0"/>
+    </linearGradient>
+    <filter id="softShadow" x="-35%" y="-35%" width="170%" height="170%">
+      <feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#1b2a80" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#softShadow)">
+    <path class="shield-rim" d="M256 98C340 98 402 104 424 128C437 142 440 164 440 196V300C440 376 372 426 256 458C140 426 72 376 72 300V196C72 164 75 142 88 128C110 104 172 98 256 98Z"/>
+    <path class="shield-body" d="M256 98C340 98 402 104 424 128C437 142 440 164 440 196V300C440 376 372 426 256 458C140 426 72 376 72 300V196C72 164 75 142 88 128C110 104 172 98 256 98Z"/>
+  </g>
+
+  <text class="label" x="256" y="304">Proxy</text>
 </svg>
