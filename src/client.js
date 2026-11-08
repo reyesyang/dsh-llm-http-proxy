@@ -1,5 +1,5 @@
 /**
- * Browser half of dsh-llm-proxy.
+ * Browser half of @0x0lab/dsh-llm-proxy.
  *
  * The bundle's detail page renders this card through `plugins.bundle.config`:
  * one row per configured LLM provider, plus a form that adds or replaces a
@@ -11,10 +11,10 @@
  * dropdown follows the providers composed in this deployment. When that
  * catalogue is unavailable the form falls back to a provider id text input.
  *
- * @module dsh-llm-proxy/client
+ * @module @0x0lab/dsh-llm-proxy/client
  */
 window.__ModuleLoader__.load({
-  id: 'dsh-llm-proxy',
+  id: '@0x0lab/dsh-llm-proxy',
   factory(require) {
     const React = require('react')
     const h = React.createElement
@@ -22,7 +22,7 @@ window.__ModuleLoader__.load({
     /** Client locale namespace owned by this plugin. */
     const NS = 'llmHttpProxy'
     /** Bundle package name: the key `plugins.bundle.config` dispatches. */
-    const PACKAGE = 'dsh-llm-proxy'
+    const PACKAGE = '@0x0lab/dsh-llm-proxy'
     /** Profile entry id this bundle inserts; the settings namespace of its config. */
     const ENTRY = 'llm-proxy'
 
