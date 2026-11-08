@@ -7,7 +7,7 @@
  * satisfied is refused at load instead of being skipped, because a silently dropped route proxies
  * exactly the traffic the user tried to route elsewhere.
  *
- * @module dsh-llm-http-proxy/routes
+ * @module dsh-llm-proxy/routes
  */
 
 /** Where a matched route sends its request. */
@@ -57,18 +57,18 @@ const DIRECT_TARGET = 'direct'
 export function compileRoutes(raw: Readonly<Record<string, string>>): ProxyRoute[] {
   return Object.entries(raw).map(([rawPattern, rawTarget]) => {
     const pattern = rawPattern.trim().toLowerCase()
-    if (pattern === '') throw new Error('llm-http-proxy: route patterns must not be empty')
+    if (pattern === '') throw new Error('llm-proxy: route patterns must not be empty')
     const value = rawTarget.trim()
     if (value.toLowerCase() === DIRECT_TARGET) {
       return { pattern, target: { kind: 'direct' } }
     }
     const parsed = URL.parse(value)
     if (parsed === null) {
-      throw new Error(`llm-http-proxy: route "${rawPattern}" is neither "direct" nor a valid URL`)
+      throw new Error(`llm-proxy: route "${rawPattern}" is neither "direct" nor a valid URL`)
     }
     if (!SUPPORTED_PROXY_PROTOCOLS.has(parsed.protocol)) {
       throw new Error(
-        `llm-http-proxy: route "${rawPattern}" uses the unsupported ${parsed.protocol}// scheme;`
+        `llm-proxy: route "${rawPattern}" uses the unsupported ${parsed.protocol}// scheme;`
         + ' use an http://, https://, or socks5:// proxy URL',
       )
     }

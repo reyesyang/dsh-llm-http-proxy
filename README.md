@@ -1,4 +1,4 @@
-# dsh-llm-http-proxy
+# dsh-llm-proxy
 
 Provider-scoped outbound proxy for model requests.
 
@@ -27,7 +27,7 @@ and enables it as a unit rather than by hand-editing the profile patch.
 Install it into the profile that should use it:
 
 ```
-plugin_manager(action="install_bundle", target="dsh-llm-http-proxy")
+plugin_manager(action="install_bundle", target="dsh-llm-proxy")
 ```
 
 `install_bundle` adds the dependency, selects the bundle, and applies its patch layer. To develop
@@ -35,21 +35,21 @@ against a local checkout, pass the checkout's absolute path instead; DSH records
 dependency:
 
 ```
-plugin_manager(action="install_bundle", target="/absolute/path/to/dsh-llm-http-proxy")
+plugin_manager(action="install_bundle", target="/absolute/path/to/dsh-llm-proxy")
 ```
 
 A linked checkout supplies its own `dependencies` and `peerDependencies`. Rebuilding and restarting
 DSH are required after changing its code; configuration changes apply through HMR.
 
 Enable or disable the installed bundle and its row from the plugin page, or with
-`plugin_manager(action="set_bundle", target="dsh-llm-http-proxy", enabled=false)` and
-`plugin_manager(action="set_plugin", target="llm-http-proxy", enabled=false)`.
+`plugin_manager(action="set_bundle", target="dsh-llm-proxy", enabled=false)` and
+`plugin_manager(action="set_plugin", target="llm-proxy", enabled=false)`.
 
 ## Configuration
 
 ### From the plugin page
 
-Open **Plugins → dsh-llm-http-proxy**. The detail page carries the configuration card:
+Open **Plugins → dsh-llm-proxy**. The detail page carries the configuration card:
 
 1. Pick a provider from the dropdown of providers composed in this deployment.
 2. Pick **HTTP** or **SOCKS5** as the proxy transport.
@@ -72,8 +72,8 @@ profile's `cordis.patch.yml`. `providers` is a volatile field, so a saved change
 plugin without a reload. The same mapping can be written by hand:
 
 ```yaml
-- id: llm-http-proxy
-  name: 'dsh-llm-http-proxy'
+- id: llm-proxy
+  name: 'dsh-llm-proxy'
   config:
     providers:
       # A provider reached through the local SOCKS5 proxy.
@@ -103,8 +103,8 @@ after `providers`; the bundle ships it empty. Override the row in the profile's
 `cordis.patch.yml` — the profile layer wins over the bundle's default:
 
 ```yaml
-- id: llm-http-proxy
-  name: 'dsh-llm-http-proxy'
+- id: llm-proxy
+  name: 'dsh-llm-proxy'
   config:
     routes:
       # Overseas providers through the local proxy.
@@ -189,7 +189,7 @@ npx publint .
 
 A prerelease version (for example `1.1.0-rc.1`) needs an explicit dist-tag — `npm publish --tag next` —
 because npm refuses to guess `latest` for one. Move `latest` to a prerelease only deliberately:
-`npm dist-tag add dsh-llm-http-proxy@1.1.0-rc.1 latest`.
+`npm dist-tag add dsh-llm-proxy@1.1.0-rc.1 latest`.
 
 ## Limits
 

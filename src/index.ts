@@ -28,8 +28,8 @@
  * still reaches the original `fetch` unchanged.
  *
  * ```yaml
- * - id: llm-http-proxy
- *   name: 'dsh-llm-http-proxy'
+ * - id: llm-proxy
+ *   name: 'dsh-llm-proxy'
  *   config:
  *     # Written by the plugin page; a provider without an entry connects directly.
  *     providers:
@@ -44,7 +44,7 @@
  *       kimi.com: http://127.0.0.1:8080
  * ```
  *
- * @module dsh-llm-http-proxy
+ * @module dsh-llm-proxy
  */
 import { AsyncLocalStorage } from 'node:async_hooks'
 import type { Context, Volatile } from '@deepseek-ai/cordis'
@@ -61,7 +61,7 @@ export { compileRoutes, routeFor } from './routes.ts'
 export type { ProxyRoute, RouteTarget } from './routes.ts'
 
 /** Cordis plugin name used by loader diagnostics. */
-export const name = 'llm-http-proxy'
+export const name = 'llm-proxy'
 
 /** This plugin depends on no service: it rewrites the transport every caller reaches. */
 export const inject: string[] = []
@@ -333,7 +333,7 @@ export function apply(ctx: Context, config: Config): void {
   globalThis.fetch = routed
   const offStream = listenLlmStream(ctx, (options, next) => runWithProvider(scope, options.provider, next()))
   ctx.logger.info(
-    'llm-http-proxy: %d provider proxy setting(s), %d host pattern(s) for model requests',
+    'llm-proxy: %d provider proxy setting(s), %d host pattern(s) for model requests',
     Object.keys(providerTableOf(config)).length,
     routes.length,
   )
@@ -402,7 +402,7 @@ class ProviderProxies {
         const proxyUrl = compileProviderProxies({ [provider]: setting }).get(provider)
         if (proxyUrl !== undefined) urls.set(provider, proxyUrl)
       } catch (error) {
-        this.warn(`llm-http-proxy: ignoring provider "${provider}": ${error instanceof Error ? error.message : String(error)}`)
+        this.warn(`llm-proxy: ignoring provider "${provider}": ${error instanceof Error ? error.message : String(error)}`)
       }
     }
     return urls
