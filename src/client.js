@@ -28,7 +28,6 @@ window.__ModuleLoader__.load({
 
     const en = {
       title: 'Outbound proxy',
-      intro: 'Send model requests for selected providers through their own HTTP or SOCKS5 proxy. Providers without an entry connect directly and keep the process-wide proxy policy.',
       empty: 'No provider is configured.',
       provider: 'Provider',
       providerPlaceholder: 'Select a provider',
@@ -46,7 +45,6 @@ window.__ModuleLoader__.load({
       saveFailed: 'The configuration was not saved.',
       saved: 'Saved.',
       configured: 'Configured providers',
-      directNote: 'Unconfigured providers are not proxied by this plugin.',
       catalogueMissing: 'The provider list is unavailable; enter a provider id instead.',
       catalogueEmpty: 'The LLM service reports no available provider; enter a provider id instead.',
       catalogueFailed: 'Could not load the provider list: {detail}',
@@ -58,7 +56,6 @@ window.__ModuleLoader__.load({
 
     const zh = {
       title: '出站代理',
-      intro: '为指定 provider 的模型请求单独选择 HTTP 或 SOCKS5 代理。未配置的 provider 直接连接，沿用 DSH 进程的代理策略。',
       empty: '尚未配置任何 provider。',
       provider: 'Provider',
       providerPlaceholder: '选择 provider',
@@ -76,7 +73,6 @@ window.__ModuleLoader__.load({
       saveFailed: '配置保存失败。',
       saved: '已保存。',
       configured: '已配置的 provider',
-      directNote: '未配置的 provider 不经过本插件代理。',
       catalogueMissing: '无法读取 provider 列表，请直接填写 provider id。',
       catalogueEmpty: 'LLM 服务没有返回可用的 provider，请直接填写 provider id。',
       catalogueFailed: '无法读取 provider 列表：{detail}',
@@ -416,7 +412,6 @@ window.__ModuleLoader__.load({
       return h('div', { className: 'llm-http-proxy-config' },
         h('style', null, css),
         h('h3', { className: 'llm-http-proxy-title' }, t('title')),
-        h('p', { className: 'llm-http-proxy-intro' }, t('intro')),
         h('div', { className: 'llm-http-proxy-list' }, rows),
         h('div', { className: 'llm-http-proxy-form' },
           h('label', { className: 'llm-http-proxy-field' },
@@ -455,7 +450,6 @@ window.__ModuleLoader__.load({
         error === null ? null : h('p', { className: 'llm-http-proxy-error' }, error),
         catalogueNote === null ? null : h('p', { className: 'llm-http-proxy-error' }, catalogueNote),
         notice ? h('p', { className: 'llm-http-proxy-note' }, t('saved')) : null,
-        h('p', { className: 'llm-http-proxy-intro' }, t('directNote')),
       )
     }
 

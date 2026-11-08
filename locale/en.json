@@ -1,6 +1,7 @@
 {
   "meta": {
     "title": "LLM outbound proxy",
-    "description": "Configure an HTTP or SOCKS5 proxy per LLM provider from the plugin page; providers without an entry connect directly."
+    "description": "Per-provider HTTP or SOCKS5 proxy for model requests.",
+    "detail": "docs/detail.md"
   }
 }

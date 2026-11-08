@@ -1,7 +1,7 @@
 {
   "name": "dsh-llm-http-proxy",
   "description": "Provider-scoped outbound HTTP proxy routes for model requests",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "type": "module",
   "engines": {
     "node": ">=22.19.0"
@@ -27,7 +27,8 @@
     "src/client.js",
     "cordis.patch.yml",
     "locale/*.json",
-    "icon.svg"
+    "icon.svg",
+    "docs/*.md"
   ],
   "keywords": [
     "dsh",
