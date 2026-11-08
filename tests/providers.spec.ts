@@ -4,14 +4,14 @@ import { compileProviderProxies } from '../src/providers.ts'
 describe('compileProviderProxies', () => {
   it('turns an HTTP transport and address into a proxy URL', () => {
     expect(compileProviderProxies({
-      opencode: { type: 'http', address: '127.0.0.1:7890' },
-    })).toEqual(new Map([['opencode', 'http://127.0.0.1:7890']]))
+      opencode: { type: 'http', address: '127.0.0.1:8080' },
+    })).toEqual(new Map([['opencode', 'http://127.0.0.1:8080']]))
   })
 
   it('turns a SOCKS5 transport and address into a proxy URL', () => {
     expect(compileProviderProxies({
-      opendesign: { type: 'socks5', address: '127.0.0.1:7891' },
-    })).toEqual(new Map([['opendesign', 'socks5://127.0.0.1:7891']]))
+      opendesign: { type: 'socks5', address: '127.0.0.1:1081' },
+    })).toEqual(new Map([['opendesign', 'socks5://127.0.0.1:1081']]))
   })
 
   it('keeps proxy credentials and surrounding whitespace out of the address', () => {
@@ -22,9 +22,9 @@ describe('compileProviderProxies', () => {
 
   it('omits a disabled entry so the provider keeps the process-wide policy', () => {
     expect(compileProviderProxies({
-      paused: { type: 'http', address: '127.0.0.1:7890', enabled: false },
-      live: { type: 'socks5', address: '127.0.0.1:7891' },
-    })).toEqual(new Map([['live', 'socks5://127.0.0.1:7891']]))
+      paused: { type: 'http', address: '127.0.0.1:8080', enabled: false },
+      live: { type: 'socks5', address: '127.0.0.1:1081' },
+    })).toEqual(new Map([['live', 'socks5://127.0.0.1:1081']]))
   })
 
   it('keeps every provider in configuration order', () => {
@@ -36,10 +36,10 @@ describe('compileProviderProxies', () => {
   })
 
   it.each([
-    ['an empty provider id', { ' ': { type: 'http' as const, address: '127.0.0.1:7890' } }, /provider ids must not be empty/],
+    ['an empty provider id', { ' ': { type: 'http' as const, address: '127.0.0.1:8080' } }, /provider ids must not be empty/],
     ['an empty address', { live: { type: 'http' as const, address: '  ' } }, /empty proxy address/],
-    ['an address carrying a scheme', { live: { type: 'http' as const, address: 'http://127.0.0.1:7890' } }, /without a scheme/],
-    ['an address without a host', { live: { type: 'socks5' as const, address: ':1080' } }, /invalid proxy address/],
+    ['an address carrying a scheme', { live: { type: 'http' as const, address: 'http://127.0.0.1:8080' } }, /without a scheme/],
+    ['an address without a host', { live: { type: 'socks5' as const, address: ':1081' } }, /invalid proxy address/],
   ])('refuses %s', (_label, raw, message) => {
     expect(() => compileProviderProxies(raw)).toThrow(message)
   })

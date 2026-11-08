@@ -35,13 +35,13 @@
  *     providers:
  *       opendesign:
  *         type: socks5
- *         address: 127.0.0.1:7891
+ *         address: 127.0.0.1:1081
  *       opencode:
  *         type: http
- *         address: 127.0.0.1:7890
+ *         address: 127.0.0.1:8080
  *     # Optional host-pattern fallback, kept for calls outside a model request.
  *     routes:
- *       kimi.com: http://127.0.0.1:7890
+ *       kimi.com: http://127.0.0.1:8080
  * ```
  *
  * @module dsh-llm-http-proxy
