@@ -1,14 +1,15 @@
 # dsh-llm-http-proxy
 
-Provider-scoped outbound proxy routes for model requests.
+Provider-scoped outbound proxy for model requests.
 
 DSH resolves **one** outbound proxy policy per process from `HTTP_PROXY` / `HTTPS_PROXY` /
 `ALL_PROXY` and installs it as undici's global dispatcher. That cannot express a deployment with
 several model endpoints that need different egress — an overseas provider behind a local proxy, an
 internal gateway that must stay direct. This plugin adds the missing per-provider choice without
-touching the process policy: it wraps `globalThis.fetch` and sends a request whose host matches a
-configured route with a dispatcher chosen for that route. Unmatched requests reach the original
-`fetch` unchanged and keep the process-wide policy.
+touching the process policy: the plugin page configures a proxy per LLM provider, and a model call
+whose provider has an entry is sent with that provider's dispatcher. Every other request reaches the
+original `fetch` unchanged and keeps the process-wide policy. A host-pattern table remains available
+as a fallback for requests made outside a model call.
 
 A matched request travels on `undici`'s own `fetch`, not Node's built-in one. A dispatcher is only
 valid for the `fetch` from the same undici copy: Node's built-in `fetch` embeds its own undici and
@@ -46,8 +47,60 @@ Enable or disable the installed bundle and its row from the plugin page, or with
 
 ## Configuration
 
-The bundle ships an empty route table, so installing it changes no traffic. Override the row in the
-profile's `cordis.patch.yml` — the profile layer wins over the bundle's default:
+### From the plugin page
+
+Open **Plugins → dsh-llm-http-proxy**. The detail page carries the configuration card:
+
+1. Pick a provider from the dropdown of providers composed in this deployment.
+2. Pick **HTTP** or **SOCKS5** as the proxy transport.
+3. Enter the proxy address as `host:port` (credentials are allowed:
+   `user:pass@host:port`), without an `http://` or `socks5://` prefix.
+4. **Add**. To change an entry, **Remove** it and add it again with the new transport or address.
+
+Configured providers are listed with an **on/off switch**, an **Edit** action, and a **Remove**
+action. **Edit** turns the row into inline transport and address controls with **Save** / **Cancel**
+(`Enter` saves, `Escape` cancels); the provider id and the switch state are kept. Switching an entry
+off keeps its transport and address in configuration but stops proxying that provider, so it falls
+back to the process-wide policy; switch it back on to resume without retyping the address. A provider
+without an entry (or with its switch off) is not proxied by this plugin: its request keeps DSH's
+process-wide policy, which is a direct connection unless `HTTP_PROXY` / `HTTPS_PROXY` / `ALL_PROXY`
+is set. That default is what "no proxy" means here; the plugin never forces a direct connection over
+the process policy.
+
+The page writes the row's `providers` mapping through DSH's settings service into the active
+profile's `cordis.patch.yml`. `providers` is a volatile field, so a saved change reaches the running
+plugin without a reload. The same mapping can be written by hand:
+
+```yaml
+- id: llm-http-proxy
+  name: 'dsh-llm-http-proxy'
+  config:
+    providers:
+      # A provider reached through the local SOCKS5 proxy.
+      opendesign:
+        type: socks5
+        address: 127.0.0.1:7891
+      # Another provider through an HTTP proxy, currently paused by its switch.
+      opencode:
+        type: http
+        address: 127.0.0.1:7890
+        enabled: false
+```
+
+At request time the plugin learns the provider from DSH's `llm/stream` waterfall and sends that
+model call through the provider's proxy. Requests made outside a model call — model discovery, for
+example — have no provider in scope and keep the process-wide policy.
+
+A malformed provider entry fails the plugin load instead of being skipped: a silently dropped entry
+sends exactly the traffic the user tried to route elsewhere. An invalid value written later (for
+example by editing the patch by hand) is logged and ignored per request rather than failing every
+call.
+
+### Host patterns (legacy)
+
+The `routes` table still works as a fallback for requests outside a model call. It is consulted
+after `providers`; the bundle ships it empty. Override the row in the profile's
+`cordis.patch.yml` — the profile layer wins over the bundle's default:
 
 ```yaml
 - id: llm-http-proxy
@@ -107,6 +160,11 @@ DSH installations that load built packages resolve `main`/`exports` from `lib/`.
 running `tsx` may also import `./src/*` through the `./src/*` export, which is why `src/` ships in the
 tarball: `install_bundle` on a published version must still resolve that entry.
 
+The browser half is `src/client.js`, hand-written in the `window.__ModuleLoader__.load` form and
+exported as `./client`; it is shipped as source and needs no build step. The Host bundle is the
+built `lib/`, so rebuild and restart DSH after changing the Host half. A linked checkout serves the
+changed files directly, but DSH must still be restarted to load a fresh Host module generation.
+
 ## Publish
 
 The package is published to the public npm registry. `install_bundle` resolves it by name, so the
@@ -137,7 +195,10 @@ because npm refuses to guess `latest` for one. Move `latest` to a prerelease onl
 
 - The wrapper covers `globalThis.fetch`, which is what the shipped model adapters reach. A library
   that calls `undici.fetch` directly keeps the process-wide policy.
-- A matched request is carried by this package's `fetch`, so its `Response`, headers, and body
+- Provider routing rides DSH's `llm/stream` waterfall. A request the harness makes outside that
+  waterfall — model discovery, for example — has no provider in scope and keeps its host route or
+  the process-wide policy.
+- A routed request is carried by this package's `fetch`, so its `Response`, headers, and body
   streams come from undici rather than Node's built-in implementations. They are spec-compliant and
   stream-compatible; only a strict `instanceof Response` against the global constructor would see the
   difference. A `FormData` body is likewise rebuilt on undici's class, which preserves multipart
@@ -145,8 +206,11 @@ because npm refuses to guess `latest` for one. Move `latest` to a prerelease onl
 - The route's `fetch` and dispatcher come from the same `undici` package, so routing does not depend
   on which undici copy a given Node release embeds. Unmatched requests keep using Node's built-in
   `fetch` and its process-wide policy.
-- Proxy URLs may carry credentials. Nothing here prints a proxy URL; diagnostics name the route
-  pattern and the target kind only.
+- Proxy URLs may carry credentials. Nothing here prints a provider's proxy URL; diagnostics name the
+  provider or route pattern only.
+- The plugin page writes through DSH's settings service, so it needs a profile that composes
+  `settings` and `config-editor` (the standard Web composition does). Without them the page reports
+  that configuration is unavailable; `cordis.patch.yml` still configures the plugin.
 - A TLS-intercepting proxy still needs `NODE_EXTRA_CA_CERTS`, which is read once at process start.
 - `@deepseek-ai/cordis` is a `peerDependency`: the plugin must use the harness's Cordis instance,
   not a second copy bundled with it.

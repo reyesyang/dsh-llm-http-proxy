@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "LLM HTTP Proxy",
-    "description": "Send model requests for selected hosts through their own HTTP proxy, or force them to connect directly."
+    "title": "LLM outbound proxy",
+    "description": "Configure an HTTP or SOCKS5 proxy per LLM provider from the plugin page; providers without an entry connect directly."
   }
 }

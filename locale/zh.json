@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "LLM 出站代理",
-    "description": "让指定主机的模型请求走各自配置的 HTTP 代理，或强制直连。"
+    "description": "在插件详情页为各个 LLM provider 分别配置 HTTP 或 SOCKS5 代理，未配置的 provider 保持直连。"
   }
 }

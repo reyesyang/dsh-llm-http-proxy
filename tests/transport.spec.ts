@@ -137,6 +137,7 @@ describe('routed transport', () => {
   let context: Context | undefined
   const servers: net.Server[] = []
   let proxyHits = 0
+  let configuredHits = 0
   const tunnels: { addressType: number; host: string }[] = []
 
   afterEach(async () => {
@@ -145,6 +146,7 @@ describe('routed transport', () => {
     context = undefined
     await Promise.all(servers.splice(0).map(close))
     proxyHits = 0
+    configuredHits = 0
     tunnels.length = 0
   })
 
@@ -257,5 +259,106 @@ describe('routed transport', () => {
 
     expect(response.status).toBe(200)
     expect(tunnels).toEqual([{ addressType: 0x03, host: 'localhost' }])
+  })
+
+  /**
+   * Drive one model call through the plugin's `llm/stream` listener.
+   *
+   * The listener is registered by `apply`; this helper dispatches the same shape the LLM service
+   * uses, so the `fetch` inside the callback sees the provider in scope.
+   */
+  async function modelCall(provider: string, url: string): Promise<Response> {
+    const waterfall = context!.waterfall as unknown as (
+      thisArg: Context,
+      name: string,
+      options: { provider: string },
+      next: () => AsyncIterable<Response>,
+    ) => AsyncIterable<Response>
+    const stream = waterfall.call(context!, context!, 'llm/stream', { provider }, () => (async function* () {
+      yield await globalThis.fetch(url)
+    })())
+    const chunks: Response[] = []
+    for await (const chunk of stream) chunks.push(chunk)
+    return chunks[0]!
+  }
+
+  it('sends a provider-routed model request through its HTTP proxy', async () => {
+    const target = await listen(targetServer())
+    const proxy = await listen(proxyServer(() => { proxyHits += 1 }))
+    servers.push(target.server, proxy.server)
+    context = new Context()
+    await context.plugin(plugin, {
+      providers: { 'open-design': { type: 'http', address: new URL(proxy.url).host } },
+    })
+
+    const response = await modelCall('open-design', `${target.url}/v1/messages`)
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({ method: 'GET', body: '' })
+    expect(proxyHits).toBe(1)
+  })
+
+  it('sends a provider-routed model request through a SOCKS5 proxy', async () => {
+    const target = await listen(targetServer())
+    const socks = await listen(socks5Server((addressType, host) => { tunnels.push({ addressType, host }) }))
+    servers.push(target.server, socks.server)
+    const port = new URL(target.url).port
+    context = new Context()
+    await context.plugin(plugin, {
+      providers: { 'open-design': { type: 'socks5', address: new URL(socks.url).host } },
+    })
+
+    const response = await modelCall('open-design', `http://localhost:${port}/v1/messages`)
+
+    expect(response.status).toBe(200)
+    expect(tunnels).toEqual([{ addressType: 0x03, host: 'localhost' }])
+  })
+
+  it('leaves a provider without an entry on the process-wide policy', async () => {
+    const target = await listen(targetServer())
+    const proxy = await listen(proxyServer(() => { proxyHits += 1 }))
+    servers.push(target.server, proxy.server)
+
+    const previous = getGlobalDispatcher()
+    const processProxy = new ProxyAgent({ uri: proxy.url })
+    setGlobalDispatcher(processProxy)
+    try {
+      context = new Context()
+      await context.plugin(plugin, { providers: {} })
+
+      const response = await modelCall('plain', `${target.url}/v1/messages`)
+
+      expect(response.status).toBe(200)
+      expect(proxyHits).toBe(1)
+    } finally {
+      setGlobalDispatcher(previous)
+      await processProxy.close()
+    }
+  })
+
+  it('leaves a disabled provider entry on the process-wide policy', async () => {
+    const target = await listen(targetServer())
+    const processProxy = await listen(proxyServer(() => { proxyHits += 1 }))
+    const configuredProxy = await listen(proxyServer(() => { configuredHits += 1 }))
+    servers.push(target.server, processProxy.server, configuredProxy.server)
+
+    const previous = getGlobalDispatcher()
+    const processAgent = new ProxyAgent({ uri: processProxy.url })
+    setGlobalDispatcher(processAgent)
+    try {
+      context = new Context()
+      await context.plugin(plugin, {
+        providers: { live: { type: 'http', address: new URL(configuredProxy.url).host, enabled: false } },
+      })
+
+      const response = await modelCall('live', `${target.url}/v1/messages`)
+
+      expect(response.status).toBe(200)
+      expect(configuredHits).toBe(0)
+      expect(proxyHits).toBe(1)
+    } finally {
+      setGlobalDispatcher(previous)
+      await processAgent.close()
+    }
   })
 })

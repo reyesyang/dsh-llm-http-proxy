@@ -9,6 +9,13 @@
  * dispatcher chosen for that route. Everything else reaches the original `fetch` unchanged and
  * keeps the process-wide policy.
  *
+ * The plugin page configures this per provider: each entry names a registered LLM provider and one
+ * HTTP or SOCKS5 proxy. At request time the `llm/stream` waterfall supplies the provider that owns
+ * the call, and the wrapped `fetch` sends that call through the provider's proxy; a provider without
+ * an entry (the default) keeps the process-wide policy. A legacy route table still works and is
+ * consulted after the provider table, so hosts reached outside a model call — model discovery, for
+ * example — keep their configured egress.
+ *
  * A route target is either `direct` — which overrides a process-wide proxy for that host — or an
  * `http://`/`https://` proxy URL. Routes are host patterns, not provider names: the LLM registry
  * exposes provider ids and display names but no endpoint, so the configured provider `baseURL` is
@@ -24,19 +31,32 @@
  * - id: llm-http-proxy
  *   name: 'dsh-llm-http-proxy'
  *   config:
+ *     # Written by the plugin page; a provider without an entry connects directly.
+ *     providers:
+ *       opendesign:
+ *         type: socks5
+ *         address: 127.0.0.1:7891
+ *       opencode:
+ *         type: http
+ *         address: 127.0.0.1:7890
+ *     # Optional host-pattern fallback, kept for calls outside a model request.
  *     routes:
- *       opencode.ai: http://127.0.0.1:7890
  *       kimi.com: http://127.0.0.1:7890
  * ```
  *
  * @module dsh-llm-http-proxy
  */
-import type { Context } from '@deepseek-ai/cordis'
+import { AsyncLocalStorage } from 'node:async_hooks'
+import type { Context, Volatile } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import type { Dispatcher } from 'undici'
+import { compileProviderProxies } from './providers.ts'
+import type { ProviderProxyTable } from './providers.ts'
 import { compileRoutes, routeFor } from './routes.ts'
 import type { ProxyRoute, RouteTarget } from './routes.ts'
 
+export { compileProviderProxies } from './providers.ts'
+export type { ProviderProxySetting, ProviderProxyTable, ProxyTransport } from './providers.ts'
 export { compileRoutes, routeFor } from './routes.ts'
 export type { ProxyRoute, RouteTarget } from './routes.ts'
 
@@ -46,19 +66,47 @@ export const name = 'llm-http-proxy'
 /** This plugin depends on no service: it rewrites the transport every caller reaches. */
 export const inject: string[] = []
 
+/** Handler-side provider config: the loader supplies a volatile reference; a plain object is accepted too. */
+export type ProviderProxyConfig = Volatile<ProviderProxyTable> | ProviderProxyTable
+
 /** Plugin config. */
 export interface Config {
   /**
+   * Provider id to its proxy, edited from the plugin page. Volatile so a saved
+   * value takes effect without reloading the plugin row. A provider without an
+   * entry is not proxied by this plugin and keeps the process-wide policy.
+   */
+  readonly providers?: ProviderProxyConfig
+  /**
    * Host pattern to `direct` or an HTTP(S) proxy URL, matched against each request's host the way
    * `NO_PROXY` matches entries. First match wins; an unmatched host keeps the process-wide policy.
+   * Consulted after {@link providers}, for requests outside a model call.
    */
-  readonly routes: Record<string, string>
+  readonly routes?: Record<string, string>
 }
 
 /** Runtime schema for {@link Config}. */
 export const Config = z.object({
+  providers: z.dict(z.object({
+    type: z.union(['http', 'socks5'] as const).default('http'),
+    address: z.string().default(''),
+    enabled: z.boolean().default(true),
+  })).default({}).volatile(),
   routes: z.dict(z.string()).default({}),
 }) as unknown as z<Config>
+
+/**
+ * Read the provider table from either the loader's volatile reference or a plain object.
+ *
+ * @param config - validated plugin config.
+ * @returns the current provider table.
+ */
+function providerTableOf(config: Config): ProviderProxyTable {
+  const value = config.providers
+  if (value === undefined) return {}
+  const reference = value as Volatile<ProviderProxyTable>
+  return typeof reference.get === 'function' ? reference.get() : value as ProviderProxyTable
+}
 
 /**
  * The transport a matched route selected.
@@ -109,6 +157,76 @@ export function createRoutedFetch(
     return transport.fetch(routedInput, routedInit)
   }
   return routed
+}
+
+/** Returns the proxy URL a model call's provider should use, or `undefined` to leave the call alone. */
+export type ProviderProxySource = (provider: string) => string | undefined
+
+/**
+ * Wrap `fetch` so a model call travels through its provider's configured proxy.
+ *
+ * The provider is read from the ambient model-call scope that {@link runWithProvider} establishes
+ * around each `llm/stream` call. Without one — any request the harness makes outside a model call —
+ * the call reaches {@link base} unchanged, so the default is no provider proxy.
+ *
+ * @param base - the `fetch` to delegate requests whose provider has no proxy to.
+ * @param proxyFor - the proxy URL configured for one provider id.
+ * @param providerOf - the provider owning the current model call, when one is in scope.
+ * @param transports - transport source for the selected proxy URL.
+ * @returns a `fetch` with the same call and return type as {@link base}.
+ */
+export function createProviderFetch(
+  base: typeof globalThis.fetch,
+  proxyFor: ProviderProxySource,
+  providerOf: () => string | undefined,
+  transports: RouteTransportSource,
+): typeof globalThis.fetch {
+  const routed: typeof globalThis.fetch = async (input, init) => {
+    const provider = providerOf()
+    if (provider === undefined) return base(input, init)
+    const proxyUrl = proxyFor(provider)
+    if (proxyUrl === undefined) return base(input, init)
+    const transport = await transports.for({ kind: 'proxy', proxyUrl })
+    const [routedInput, routedInit] = routedRequest(input, init, transport.dispatcher)
+    return transport.fetch(routedInput, routedInit)
+  }
+  return routed
+}
+
+/**
+ * Run one model-call stream inside the provider's async scope.
+ *
+ * Every step of the stream — including the `fetch` an adapter issues while the iterator advances —
+ * runs inside `AsyncLocalStorage.run`, so the request knows which provider asked for it. The
+ * wrapper runs per `next()` call rather than once around the iterable, because a consumer may
+ * interleave calls from several providers.
+ *
+ * @param scope - the store carrying the current provider id.
+ * @param provider - the provider owning this stream.
+ * @param stream - the downstream stream to iterate.
+ * @returns the same chunks, with the provider in scope during each iterator step.
+ */
+export function runWithProvider<T>(
+  scope: AsyncLocalStorage<string>,
+  provider: string,
+  stream: AsyncIterable<T>,
+): AsyncIterable<T> {
+  const iterator = stream[Symbol.asyncIterator]()
+  return {
+    [Symbol.asyncIterator](): AsyncIterator<T> {
+      return {
+        next: () => scope.run(provider, () => iterator.next()),
+        return: (value?: T) => scope.run(
+          provider,
+          () => iterator.return?.(value) ?? Promise.resolve({ done: true, value } as IteratorResult<T>),
+        ),
+        throw: (error?: unknown) => scope.run(
+          provider,
+          () => iterator.throw?.(error) ?? Promise.reject(error),
+        ),
+      }
+    },
+  }
 }
 
 /** A routed `fetch` call's init, carrying the non-standard undici dispatcher. */
@@ -185,26 +303,110 @@ function requestUrl(input: Parameters<typeof globalThis.fetch>[0]): URL | undefi
 }
 
 /**
- * Install the routing wrapper over `globalThis.fetch` for one composition lifetime.
+ * Install the provider-aware routing wrapper over `globalThis.fetch` for one composition lifetime.
  *
- * An empty route table installs nothing: the plugin then has no effect at all rather than wrapping
- * `fetch` to choose the same global dispatcher for every call.
+ * The wrapper is installed even with an empty provider table: the plugin page may add a provider
+ * later, and `providers` is volatile, so the saved value must take effect without reloading the
+ * row. With nothing configured every request reaches the original `fetch` unchanged.
+ *
+ * An invalid provider entry fails the row at load, matching the route table's policy.
  *
  * @param ctx - plugin lifetime owning the wrapper's disposal.
  * @param config - validated plugin config.
  */
 export function apply(ctx: Context, config: Config): void {
   const routes = compileRoutes(config.routes ?? {})
-  if (routes.length === 0) return
+  // A malformed entry is refused at load rather than silently skipped: skipping would send that
+  // provider's traffic around the proxy the person configured.
+  compileProviderProxies(providerTableOf(config))
+  const providers = new ProviderProxies(() => providerTableOf(config), (message) => { ctx.logger.warn(message) })
   const transports = new RouteTransports()
   const base = globalThis.fetch
-  const routed = createRoutedFetch(base, routes, transports)
+  const scope = new AsyncLocalStorage<string>()
+  const hostRouted = createRoutedFetch(base, routes, transports)
+  const routed = createProviderFetch(
+    hostRouted,
+    provider => providers.proxyFor(provider),
+    () => scope.getStore(),
+    transports,
+  )
   globalThis.fetch = routed
-  ctx.logger.info('llm-http-proxy: routing %d host pattern(s) for model requests', routes.length)
+  const offStream = listenLlmStream(ctx, (options, next) => runWithProvider(scope, options.provider, next()))
+  ctx.logger.info(
+    'llm-http-proxy: %d provider proxy setting(s), %d host pattern(s) for model requests',
+    Object.keys(providerTableOf(config)).length,
+    routes.length,
+  )
   ctx.effect(() => async () => {
+    offStream()
     if (globalThis.fetch === routed) globalThis.fetch = base
     await transports.close()
   })
+}
+
+/** The `llm/stream` waterfall listener this bundle registers. */
+type LlmStreamListener = (
+  options: { readonly provider: string },
+  next: () => AsyncIterable<unknown>,
+) => AsyncIterable<unknown>
+
+/**
+ * Subscribe to DSH's `llm/stream` waterfall without a compile-time dependency on the harness LLM
+ * package: that package owns the event declaration, while this bundle must build on its own.
+ *
+ * @param ctx - plugin lifetime owning the listener.
+ * @param listener - the waterfall listener wrapping one model call.
+ * @returns the disposer removing the listener.
+ */
+function listenLlmStream(ctx: Context, listener: LlmStreamListener): () => void {
+  const on = ctx.on as unknown as (name: string, listener: LlmStreamListener) => () => boolean
+  return on('llm/stream', listener)
+}
+
+/** The provider table's compiled proxy URLs, recompiled when a volatile save replaces the table. */
+class ProviderProxies {
+  private compiled: { source: ProviderProxyTable; urls: Map<string, string> } | undefined
+
+  /**
+   * @param read - the live provider table behind the volatile config reference.
+   * @param warn - diagnostic sink for a table that no longer compiles.
+   */
+  constructor(
+    private readonly read: () => ProviderProxyTable,
+    private readonly warn: (message: string) => void,
+  ) {}
+
+  /**
+   * The proxy URL for one provider.
+   *
+   * A table written outside the plugin page can turn malformed after load; each entry is compiled on
+   * its own so one bad provider cannot take the others' proxies with it. The request keeps the
+   * process-wide policy for that provider and the diagnostic names it.
+   *
+   * @param provider - the provider owning the current model call.
+   * @returns the configured proxy URL, or `undefined` when the provider has no usable entry.
+   */
+  proxyFor(provider: string): string | undefined {
+    const source = this.read()
+    if (this.compiled?.source !== source) {
+      this.compiled = { source, urls: this.compile(source) }
+    }
+    return this.compiled.urls.get(provider)
+  }
+
+  /** Compile every entry of one table, keeping the valid ones and warning about the rest. */
+  private compile(source: ProviderProxyTable): Map<string, string> {
+    const urls = new Map<string, string>()
+    for (const [provider, setting] of Object.entries(source)) {
+      try {
+        const proxyUrl = compileProviderProxies({ [provider]: setting }).get(provider)
+        if (proxyUrl !== undefined) urls.set(provider, proxyUrl)
+      } catch (error) {
+        this.warn(`llm-http-proxy: ignoring provider "${provider}": ${error instanceof Error ? error.message : String(error)}`)
+      }
+    }
+    return urls
+  }
 }
 
 /** Transports created by this plugin, one per distinct target, closed with the plugin. */

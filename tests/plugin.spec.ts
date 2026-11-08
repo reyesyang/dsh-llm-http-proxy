@@ -1,10 +1,13 @@
+import { AsyncLocalStorage } from 'node:async_hooks'
 import { afterEach, describe, expect, it } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import type { Dispatcher } from 'undici'
 import * as plugin from '../src/index.ts'
 import {
   compileRoutes,
+  createProviderFetch,
   createRoutedFetch,
+  runWithProvider,
   type RouteTarget,
   type RouteTransport,
 } from '../src/index.ts'
@@ -145,16 +148,64 @@ describe('apply', () => {
     expect(globalThis.fetch).toBe(original)
   })
 
-  it('installs nothing for an empty route table', async () => {
+  it('installs a wrapper even with no configured proxy', async () => {
     context = new Context()
     const fiber = context.plugin(plugin, { routes: {} })
     await fiber
-    expect(globalThis.fetch).toBe(original)
+    expect(globalThis.fetch).not.toBe(original)
   })
 
   it('refuses an invalid configured target at load', async () => {
     context = new Context()
     await expect(context.plugin(plugin, { routes: { 'example.com': 'socks4://127.0.0.1:1080' } }))
       .rejects.toThrow(/unsupported socks4:\/\/ scheme/)
+  })
+})
+
+describe('createProviderFetch', () => {
+  it('sends a provider with a configured proxy through its transport', async () => {
+    const transports = fakeTransports()
+    const base = recordingFetch()
+    const routed = createProviderFetch(base.fetch, provider => provider === 'live' ? 'socks5://127.0.0.1:1080' : undefined, () => 'live', transports)
+    await routed('https://api.example.com/v1')
+    expect(transports.targets).toEqual([{ kind: 'proxy', proxyUrl: 'socks5://127.0.0.1:1080' }])
+    expect(base.calls).toHaveLength(0)
+  })
+
+  it('delegates a provider without a configured proxy', async () => {
+    const transports = fakeTransports()
+    const base = recordingFetch()
+    const routed = createProviderFetch(base.fetch, () => undefined, () => 'plain', transports)
+    await routed('https://api.example.com/v1')
+    expect(transports.targets).toEqual([])
+    expect(base.calls).toHaveLength(1)
+  })
+
+  it('delegates a request made outside any model call', async () => {
+    const transports = fakeTransports()
+    const base = recordingFetch()
+    const routed = createProviderFetch(base.fetch, () => 'http://127.0.0.1:7890', () => undefined, transports)
+    await routed('https://api.example.com/v1')
+    expect(transports.targets).toEqual([])
+    expect(base.calls).toHaveLength(1)
+  })
+})
+
+describe('runWithProvider', () => {
+  it('keeps the provider in scope while the stream is consumed', async () => {
+    const scope = new AsyncLocalStorage<string>()
+    const seen: (string | undefined)[] = []
+    async function* source(): AsyncGenerator<number> {
+      await Promise.resolve()
+      seen.push(scope.getStore())
+      yield 1
+      await Promise.resolve()
+      seen.push(scope.getStore())
+    }
+    const chunks: number[] = []
+    for await (const chunk of runWithProvider(scope, 'live', source())) chunks.push(chunk)
+    expect(chunks).toEqual([1])
+    expect(seen).toEqual(['live', 'live'])
+    expect(scope.getStore()).toBeUndefined()
   })
 })
