@@ -57,7 +57,7 @@ function recordingFetch(): { calls: (Dispatcher | undefined)[]; fetch: typeof gl
 
 describe('createRoutedFetch', () => {
   const routes = compileRoutes({
-    'api.example.com': 'http://127.0.0.1:7890',
+    'api.example.com': 'http://127.0.0.1:8080',
     'direct.example': 'direct',
   })
 
@@ -66,7 +66,7 @@ describe('createRoutedFetch', () => {
     const base = recordingFetch()
     const routed = createRoutedFetch(base.fetch, routes, transports)
     await routed('https://api.example.com/v1/messages')
-    expect(transports.targets).toEqual([{ kind: 'proxy', proxyUrl: 'http://127.0.0.1:7890' }])
+    expect(transports.targets).toEqual([{ kind: 'proxy', proxyUrl: 'http://127.0.0.1:8080' }])
     expect(transports.transport.calls).toHaveLength(1)
     expect(transports.transport.calls[0]?.init?.dispatcher).toBe(transports.transport.dispatcher)
     expect(base.calls).toHaveLength(0)
@@ -140,7 +140,7 @@ describe('apply', () => {
   it('installs a wrapper over globalThis.fetch and restores it on disposal', async () => {
     context = new Context()
     const fiber = context.plugin(plugin, {
-      routes: { 'api.example.com': 'http://127.0.0.1:7890' },
+      routes: { 'api.example.com': 'http://127.0.0.1:8080' },
     })
     await fiber
     expect(globalThis.fetch).not.toBe(original)
@@ -157,7 +157,7 @@ describe('apply', () => {
 
   it('refuses an invalid configured target at load', async () => {
     context = new Context()
-    await expect(context.plugin(plugin, { routes: { 'example.com': 'socks4://127.0.0.1:1080' } }))
+    await expect(context.plugin(plugin, { routes: { 'example.com': 'socks4://127.0.0.1:1081' } }))
       .rejects.toThrow(/unsupported socks4:\/\/ scheme/)
   })
 })
@@ -166,9 +166,9 @@ describe('createProviderFetch', () => {
   it('sends a provider with a configured proxy through its transport', async () => {
     const transports = fakeTransports()
     const base = recordingFetch()
-    const routed = createProviderFetch(base.fetch, provider => provider === 'live' ? 'socks5://127.0.0.1:1080' : undefined, () => 'live', transports)
+    const routed = createProviderFetch(base.fetch, provider => provider === 'live' ? 'socks5://127.0.0.1:1081' : undefined, () => 'live', transports)
     await routed('https://api.example.com/v1')
-    expect(transports.targets).toEqual([{ kind: 'proxy', proxyUrl: 'socks5://127.0.0.1:1080' }])
+    expect(transports.targets).toEqual([{ kind: 'proxy', proxyUrl: 'socks5://127.0.0.1:1081' }])
     expect(base.calls).toHaveLength(0)
   })
 
@@ -184,7 +184,7 @@ describe('createProviderFetch', () => {
   it('delegates a request made outside any model call', async () => {
     const transports = fakeTransports()
     const base = recordingFetch()
-    const routed = createProviderFetch(base.fetch, () => 'http://127.0.0.1:7890', () => undefined, transports)
+    const routed = createProviderFetch(base.fetch, () => 'http://127.0.0.1:8080', () => undefined, transports)
     await routed('https://api.example.com/v1')
     expect(transports.targets).toEqual([])
     expect(base.calls).toHaveLength(1)

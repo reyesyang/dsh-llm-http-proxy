@@ -79,11 +79,11 @@ plugin without a reload. The same mapping can be written by hand:
       # A provider reached through the local SOCKS5 proxy.
       opendesign:
         type: socks5
-        address: 127.0.0.1:7891
+        address: 127.0.0.1:1081
       # Another provider through an HTTP proxy, currently paused by its switch.
       opencode:
         type: http
-        address: 127.0.0.1:7890
+        address: 127.0.0.1:8080
         enabled: false
 ```
 
@@ -108,8 +108,8 @@ after `providers`; the bundle ships it empty. Override the row in the profile's
   config:
     routes:
       # Overseas providers through the local proxy.
-      opencode.ai: http://127.0.0.1:7890
-      kimi.com: http://127.0.0.1:7890
+      opencode.ai: http://127.0.0.1:8080
+      kimi.com: http://127.0.0.1:8080
       # An internal gateway that must bypass a process-wide proxy.
       internal.example.com: direct
 ```
@@ -125,7 +125,7 @@ To send everything else through a proxy while keeping named hosts direct, put th
 ```yaml
     routes:
       internal.example.com: direct
-      '*': http://127.0.0.1:7890
+      '*': http://127.0.0.1:8080
 ```
 
 Routes name hosts, not provider ids: the LLM registry exposes provider ids and display names but no
@@ -142,7 +142,7 @@ aliases and resolve to the same transport. SOCKS4 has no equivalent and is refus
 
 ```yaml
     routes:
-      amr-link.example.com: socks5://127.0.0.1:7891
+      amr-link.example.com: socks5://127.0.0.1:1081
 ```
 
 ## Build
